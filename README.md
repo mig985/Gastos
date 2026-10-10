@@ -11,10 +11,10 @@ GitHub Pages
   app.js
   manifest.webmanifest
   sw.js
-  assets/icon.svg
-  assets/icon-192.png
-  assets/icon-512.png
-  assets/apple-touch-icon.png
+  icon.svg
+  icon-192.png
+  icon-512.png
+  apple-touch-icon.png
 
 Google Apps Script
   Code.gs
