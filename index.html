@@ -15,12 +15,18 @@
   <body>
     <main class="app-shell">
       <header class="app-header">
-        <button id="prevMonth" class="icon-button ghost" type="button" aria-label="Mes anterior">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
-        </button>
-        <div>
-          <p class="eyebrow">Google Sheet</p>
-          <h1 id="monthTitle">Gastos</h1>
+        <div class="month-picker">
+          <button id="prevMonth" class="icon-button ghost" type="button" aria-label="Mes anterior">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+          </button>
+          <div class="month-title">
+            <p class="eyebrow">Google Sheet</p>
+            <select id="monthSelect" class="month-select" aria-label="Elegir mes"></select>
+            <h1 id="monthTitle">Gastos</h1>
+          </div>
+          <button id="nextMonth" class="icon-button ghost" type="button" aria-label="Mes siguiente">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+          </button>
         </div>
         <div class="top-actions">
           <button id="installButton" class="icon-button" type="button" aria-label="Instalar app" title="Instalar app">
@@ -163,6 +169,14 @@
           Más
         </button>
       </nav>
+
+      <div id="busyOverlay" class="busy-overlay" hidden>
+        <div class="busy-card">
+          <span class="spinner" aria-hidden="true"></span>
+          <strong id="busyTitle">Procesando</strong>
+          <small id="busyText">Un momento...</small>
+        </div>
+      </div>
     </main>
 
     <script src="./app.js"></script>

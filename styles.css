@@ -53,10 +53,40 @@ button {
 
 .app-header {
   display: grid;
-  grid-template-columns: 42px 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
   margin-bottom: 16px;
+}
+
+.month-picker {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 38px;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.month-title {
+  min-width: 0;
+}
+
+.month-select {
+  width: 100%;
+  min-height: 34px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  padding: 0 28px 0 0;
+  font-size: 22px;
+  font-weight: 850;
+  line-height: 1.1;
+}
+
+.month-select:focus {
+  outline: 2px solid rgba(22, 119, 255, 0.16);
+  background: #fff;
 }
 
 .top-actions {
@@ -343,6 +373,16 @@ select {
   padding: 0 12px;
 }
 
+.month-title .month-select {
+  min-height: 34px;
+  border: 0;
+  background: transparent;
+  padding: 0 28px 0 0;
+  font-size: 22px;
+  font-weight: 850;
+  line-height: 1.1;
+}
+
 input:focus,
 select:focus {
   outline: 2px solid rgba(22, 119, 255, 0.16);
@@ -462,6 +502,11 @@ select:focus {
   place-items: center;
 }
 
+.icon-button:disabled {
+  cursor: default;
+  opacity: 0.32;
+}
+
 .icon-button.ghost {
   background: transparent;
   border-color: transparent;
@@ -545,6 +590,53 @@ select:focus {
 .bottom-nav button.active {
   color: var(--primary);
   background: #eef5ff;
+}
+
+.busy-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(15, 23, 42, 0.24);
+  backdrop-filter: blur(3px);
+}
+
+.busy-overlay[hidden] {
+  display: none;
+}
+
+.busy-card {
+  width: min(86vw, 300px);
+  display: grid;
+  justify-items: center;
+  gap: 9px;
+  padding: 20px 18px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.22);
+  text-align: center;
+}
+
+.busy-card small {
+  color: var(--muted);
+}
+
+.spinner {
+  width: 34px;
+  height: 34px;
+  border: 4px solid #dbeafe;
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (max-width: 370px) {

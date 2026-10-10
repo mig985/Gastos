@@ -8,14 +8,19 @@ const state = {
   view: 'home',
   accounts: [],
   dashboard: null,
+  availableMonths: [],
+  currentMonthKey: '',
   installPrompt: null,
   currentDate: new Date(),
+  busyCount: 0,
 };
 
 const els = {
   installButton: document.getElementById('installButton'),
   settingsButton: document.getElementById('settingsButton'),
   prevMonth: document.getElementById('prevMonth'),
+  nextMonth: document.getElementById('nextMonth'),
+  monthSelect: document.getElementById('monthSelect'),
   monthTitle: document.getElementById('monthTitle'),
   views: {
     home: document.getElementById('homeView'),
@@ -49,6 +54,9 @@ const els = {
   refreshAlerts: document.getElementById('refreshAlerts'),
   alerts: document.getElementById('alerts'),
   status: document.getElementById('status'),
+  busyOverlay: document.getElementById('busyOverlay'),
+  busyTitle: document.getElementById('busyTitle'),
+  busyText: document.getElementById('busyText'),
 };
 
 function init() {
@@ -71,7 +79,17 @@ function bindEvents() {
   els.installButton.addEventListener('click', installApp);
   els.settingsButton.addEventListener('click', () => setView('settings'));
   els.prevMonth.addEventListener('click', () => {
-    state.currentDate = new Date(state.currentDate.getFullYear(), state.currentDate.getMonth() - 1, 1);
+    navigateMonth(-1);
+  });
+  els.nextMonth.addEventListener('click', () => {
+    navigateMonth(1);
+  });
+  els.monthSelect.addEventListener('change', () => {
+    if (!els.monthSelect.value) {
+      return;
+    }
+
+    state.currentDate = dateFromMonthKey(els.monthSelect.value);
     loadDashboard();
   });
 
@@ -169,7 +187,11 @@ function setView(view) {
   };
 
   els.monthTitle.textContent = titles[view] || 'Gastos';
-  els.prevMonth.hidden = view !== 'home';
+  const isHome = view === 'home';
+  els.prevMonth.hidden = !isHome;
+  els.nextMonth.hidden = !isHome;
+  els.monthSelect.hidden = !isHome || !state.availableMonths.length;
+  els.monthTitle.hidden = isHome && state.availableMonths.length > 0;
 }
 
 function setMode(mode) {
@@ -186,8 +208,10 @@ function setMode(mode) {
 }
 
 async function loadEverything() {
-  await loadAccounts();
-  await Promise.all([loadDashboard(), refreshAlerts()]);
+  await withBusy('Cargando app', 'Leyendo cuentas, tablero y alertas...', async () => {
+    await loadAccounts();
+    await Promise.all([loadDashboard({ silent: true }), refreshAlerts({ silent: true })]);
+  });
 }
 
 async function loadAccounts() {
@@ -212,10 +236,14 @@ async function loadAccounts() {
   }
 }
 
-async function loadDashboard() {
+async function loadDashboard(options = {}) {
   if (!getApiUrl()) {
     renderEmptyDashboard();
     return;
+  }
+
+  if (!options.silent) {
+    setBusy(true, 'Actualizando mes', 'Leyendo datos del Google Sheet...');
   }
 
   try {
@@ -233,11 +261,19 @@ async function loadDashboard() {
     }
   } catch (error) {
     renderEmptyDashboard(error.message);
+  } finally {
+    if (!options.silent) {
+      setBusy(false);
+    }
   }
 }
 
 function renderDashboard(data) {
-  els.monthTitle.textContent = data.month || 'Gastos';
+  state.availableMonths = data.months || [];
+  state.currentMonthKey = data.currentKey || monthKeyFromDate(state.currentDate);
+  state.currentDate = dateFromMonthKey(state.currentMonthKey);
+
+  renderMonthSelect(data.month || 'Gastos');
   els.balanceMetric.textContent = formatMoney(data.balance);
   els.expensesMetric.textContent = formatMoney(data.expenses);
   els.incomeMetric.textContent = formatMoney(data.income);
@@ -258,6 +294,7 @@ function renderDashboard(data) {
 }
 
 function renderEmptyDashboard(message) {
+  renderMonthSelect('Gastos');
   els.balanceMetric.textContent = '$ 0,00';
   els.expensesMetric.textContent = '$ 0,00';
   els.incomeMetric.textContent = '$ 0,00';
@@ -265,6 +302,61 @@ function renderEmptyDashboard(message) {
   els.progressFill.style.width = '0%';
   els.progressText.textContent = '$ 0,00 de $ 0,00';
   els.expenseList.innerHTML = `<div class="empty-state">${escapeHtml(message || 'Sin datos para mostrar.')}</div>`;
+}
+
+function renderMonthSelect(fallbackLabel) {
+  const months = state.availableMonths;
+
+  if (!months.length) {
+    els.monthTitle.hidden = false;
+    els.monthSelect.hidden = true;
+    els.monthTitle.textContent = fallbackLabel || 'Gastos';
+    els.prevMonth.disabled = true;
+    els.nextMonth.disabled = true;
+    return;
+  }
+
+  els.monthSelect.innerHTML = months
+    .map((month) => `<option value="${escapeHtml(month.key)}">${escapeHtml(capitalize(month.label))}</option>`)
+    .join('');
+
+  const selected = months.some((month) => month.key === state.currentMonthKey)
+    ? state.currentMonthKey
+    : months[months.length - 1].key;
+
+  els.monthSelect.value = selected;
+  els.monthSelect.hidden = state.view !== 'home';
+  els.monthTitle.hidden = state.view === 'home';
+  els.monthTitle.textContent = capitalize(fallbackLabel || 'Gastos');
+  updateMonthButtons();
+}
+
+function updateMonthButtons() {
+  const months = state.availableMonths || [];
+  const currentIndex = months.findIndex((month) => month.key === state.currentMonthKey);
+
+  els.prevMonth.disabled = currentIndex <= 0;
+  els.nextMonth.disabled = currentIndex < 0 || currentIndex >= months.length - 1;
+}
+
+function navigateMonth(direction) {
+  const months = state.availableMonths || [];
+  const currentKey = state.currentMonthKey || monthKeyFromDate(state.currentDate);
+  const currentIndex = months.findIndex((month) => month.key === currentKey);
+
+  if (currentIndex >= 0) {
+    const nextIndex = clamp(currentIndex + direction, 0, months.length - 1);
+
+    if (nextIndex !== currentIndex) {
+      state.currentDate = dateFromMonthKey(months[nextIndex].key);
+      loadDashboard();
+    }
+
+    return;
+  }
+
+  state.currentDate = new Date(state.currentDate.getFullYear(), state.currentDate.getMonth() + direction, 1);
+  loadDashboard();
 }
 
 function renderExpenseItem(item) {
@@ -324,6 +416,7 @@ async function saveEntry() {
   }
 
   setStatus('Guardando...', '');
+  setBusy(true, state.mode === 'payment' ? 'Guardando pago' : 'Guardando vencimiento', 'Actualizando el Google Sheet...');
 
   try {
     const response =
@@ -338,20 +431,26 @@ async function saveEntry() {
     setStatus(state.mode === 'payment' ? 'Pago guardado.' : 'Vencimiento guardado.', 'ok');
     els.amount.value = '';
     state.currentDate = new Date(`${date}T00:00:00`);
-    await Promise.all([loadDashboard(), refreshAlerts()]);
+    await Promise.all([loadDashboard({ silent: true }), refreshAlerts({ silent: true })]);
     setView('home');
   } catch (error) {
     setStatus(error.message, 'error');
     setView('settings');
+  } finally {
+    setBusy(false);
   }
 }
 
-async function refreshAlerts() {
+async function refreshAlerts(options = {}) {
   if (!getApiUrl()) {
     return;
   }
 
   els.alerts.textContent = 'Calculando...';
+
+  if (!options.silent) {
+    setBusy(true, 'Actualizando alertas', 'Calculando vencimientos y pendientes...');
+  }
 
   try {
     const response = await apiCall('alerts-preview');
@@ -363,6 +462,10 @@ async function refreshAlerts() {
     els.alerts.textContent = response.message || 'Sin novedades para alertar.';
   } catch (error) {
     els.alerts.textContent = error.message;
+  } finally {
+    if (!options.silent) {
+      setBusy(false);
+    }
   }
 }
 
@@ -442,6 +545,34 @@ function setStatus(message, tone) {
   els.status.className = tone || '';
 }
 
+async function withBusy(title, text, task) {
+  setBusy(true, title, text);
+
+  try {
+    return await task();
+  } finally {
+    setBusy(false);
+  }
+}
+
+function setBusy(active, title, text) {
+  if (active) {
+    state.busyCount += 1;
+    els.busyTitle.textContent = title || 'Procesando';
+    els.busyText.textContent = text || 'Un momento...';
+    els.busyOverlay.hidden = false;
+    document.body.classList.add('is-busy');
+    return;
+  }
+
+  state.busyCount = Math.max(0, state.busyCount - 1);
+
+  if (state.busyCount === 0) {
+    els.busyOverlay.hidden = true;
+    document.body.classList.remove('is-busy');
+  }
+}
+
 function formatMoney(value) {
   const number = Number(value) || 0;
   return new Intl.NumberFormat('es-AR', {
@@ -459,8 +590,27 @@ function toInputDate(date) {
   return `${year}-${month}-${day}`;
 }
 
+function dateFromMonthKey(key) {
+  const [year, month] = String(key || '').split('-').map(Number);
+
+  if (!year || !month) {
+    return new Date();
+  }
+
+  return new Date(year, month - 1, 1);
+}
+
+function monthKeyFromDate(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
+}
+
+function capitalize(value) {
+  const text = String(value || '');
+  return text ? text.charAt(0).toUpperCase() + text.slice(1) : '';
 }
 
 function escapeHtml(value) {
