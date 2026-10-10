@@ -6,7 +6,6 @@
     <title>Gastos</title>
     <meta name="theme-color" content="#1677ff" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Gastos" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" href="./icon.svg" type="image/svg+xml" />
@@ -14,11 +13,14 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <main>
-      <header class="topbar">
+    <main class="app-shell">
+      <header class="app-header">
+        <button id="prevMonth" class="icon-button ghost" type="button" aria-label="Mes anterior">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+        </button>
         <div>
           <p class="eyebrow">Google Sheet</p>
-          <h1>Gastos</h1>
+          <h1 id="monthTitle">Gastos</h1>
         </div>
         <div class="top-actions">
           <button id="installButton" class="icon-button" type="button" aria-label="Instalar app" title="Instalar app">
@@ -36,48 +38,131 @@
         </div>
       </header>
 
-      <section id="settingsPanel" class="panel">
-        <label for="apiUrl">URL del Apps Script</label>
-        <input id="apiUrl" placeholder="https://script.google.com/macros/s/.../exec" />
-
-        <label for="secret">Clave local</label>
-        <input id="secret" type="password" autocomplete="off" placeholder="APP_SHARED_SECRET" />
-
-        <button id="saveSettings" class="secondary" type="button">Guardar configuración</button>
-      </section>
-
-      <section class="panel">
-        <div class="segmented">
-          <button id="modePayment" class="active" type="button">Pago</button>
-          <button id="modeDue" type="button">Vencimiento</button>
+      <section id="homeView" class="view active">
+        <div class="metric-grid">
+          <article class="metric-card accent">
+            <span>Saldo</span>
+            <strong id="balanceMetric">$ 0,00</strong>
+            <small>Disponible</small>
+          </article>
+          <article class="metric-card">
+            <span>Gastos</span>
+            <strong id="expensesMetric">$ 0,00</strong>
+            <small>del mes</small>
+          </article>
+          <article class="metric-card">
+            <span>Ingresos</span>
+            <strong id="incomeMetric">$ 0,00</strong>
+            <small>del mes</small>
+          </article>
         </div>
 
-        <label for="detail">Cuenta</label>
-        <select id="detail"></select>
+        <section class="panel progress-panel">
+          <div class="section-title compact">
+            <strong>Avance del mes</strong>
+            <span id="progressLabel">0%</span>
+          </div>
+          <div class="progress-track"><span id="progressFill"></span></div>
+          <p id="progressText">$ 0,00 de $ 0,00</p>
+        </section>
 
-        <label for="date">Fecha</label>
-        <input id="date" type="date" />
-
-        <div id="amountWrap">
-          <label for="amount">Monto</label>
-          <input id="amount" inputmode="decimal" placeholder="Ej. 35642,63" />
+        <div class="segmented three">
+          <button class="active" type="button">Gastos</button>
+          <button type="button">Ingresos</button>
+          <button type="button">Resumen</button>
         </div>
 
-        <button id="saveEntry" class="primary" type="button">Guardar pago</button>
+        <section class="panel list-panel">
+          <div class="section-title">
+            <strong>Movimientos</strong>
+            <button id="refreshHome" class="link-button" type="button">Actualizar</button>
+          </div>
+          <div id="expenseList" class="expense-list"></div>
+        </section>
+
+        <button id="quickAdd" class="primary floating-action" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+          Cargar gasto
+        </button>
       </section>
 
-      <section class="panel">
-        <div class="section-title">
-          <strong>Alertas</strong>
-          <button id="refreshAlerts" class="link-button" type="button">Actualizar</button>
-        </div>
-        <pre id="alerts">Sin datos todavía.</pre>
+      <section id="formView" class="view">
+        <section class="panel form-panel">
+          <h2 id="formTitle">Nuevo gasto</h2>
+          <div class="segmented">
+            <button id="modePayment" class="active" type="button">Pago</button>
+            <button id="modeDue" type="button">Vencimiento</button>
+          </div>
+
+          <label for="detail">Detalle</label>
+          <select id="detail"></select>
+
+          <label for="date">Fecha</label>
+          <input id="date" type="date" />
+
+          <div id="amountWrap">
+            <label for="amount">Monto</label>
+            <div class="money-input">
+              <span>$</span>
+              <input id="amount" inputmode="decimal" placeholder="35.642,63" />
+            </div>
+          </div>
+
+          <div class="suggestions" id="suggestions"></div>
+
+          <button id="saveEntry" class="primary" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z" /><path d="M17 21v-8H7v8" /><path d="M7 3v5h8" /></svg>
+            <span id="saveEntryLabel">Guardar</span>
+          </button>
+        </section>
       </section>
 
-      <section class="panel result">
-        <strong>Estado</strong>
-        <p id="status">Configurá la URL del Apps Script para empezar.</p>
+      <section id="alertsView" class="view">
+        <section class="panel alerts-card">
+          <div class="section-title">
+            <strong>Alertas</strong>
+            <button id="refreshAlerts" class="link-button" type="button">Actualizar</button>
+          </div>
+          <pre id="alerts">Sin datos todavía.</pre>
+        </section>
       </section>
+
+      <section id="settingsView" class="view">
+        <section id="settingsPanel" class="panel">
+          <h2>Configuración</h2>
+          <label for="apiUrl">URL del Apps Script</label>
+          <input id="apiUrl" placeholder="https://script.google.com/macros/s/.../exec" />
+
+          <label for="secret">Clave local</label>
+          <input id="secret" type="password" autocomplete="off" placeholder="APP_SHARED_SECRET" />
+
+          <button id="saveSettings" class="secondary" type="button">Guardar configuración</button>
+        </section>
+
+        <section class="panel result">
+          <strong>Estado</strong>
+          <p id="status">Configurá la URL del Apps Script para empezar.</p>
+        </section>
+      </section>
+
+      <nav class="bottom-nav" aria-label="Navegación">
+        <button class="active" data-view="home" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z" /></svg>
+          Inicio
+        </button>
+        <button data-view="form" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+          Gastos
+        </button>
+        <button data-view="alerts" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" /><path d="M10 21h4" /></svg>
+          Alertas
+        </button>
+        <button data-view="settings" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" /><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.05.05a2.1 2.1 0 1 1-2.97 2.97l-.05-.05a1.8 1.8 0 0 0-1.98-.36 1.8 1.8 0 0 0-1.1 1.66V21.4a2.1 2.1 0 1 1-4.2 0v-.08a1.8 1.8 0 0 0-1.1-1.66 1.8 1.8 0 0 0-1.98.36l-.05.05a2.1 2.1 0 1 1-2.97-2.97l.05-.05A1.8 1.8 0 0 0 4.6 15a1.8 1.8 0 0 0-1.66-1.1H2.86a2.1 2.1 0 1 1 0-4.2h.08A1.8 1.8 0 0 0 4.6 8.6a1.8 1.8 0 0 0-.36-1.98l-.05-.05a2.1 2.1 0 1 1 2.97-2.97l.05.05A1.8 1.8 0 0 0 9.2 4a1.8 1.8 0 0 0 1.1-1.66V2.26a2.1 2.1 0 1 1 4.2 0v.08A1.8 1.8 0 0 0 15.6 4a1.8 1.8 0 0 0 1.98-.36l.05-.05a2.1 2.1 0 1 1 2.97 2.97l-.05.05A1.8 1.8 0 0 0 19.4 8.6a1.8 1.8 0 0 0 1.66 1.1h.08a2.1 2.1 0 1 1 0 4.2h-.08A1.8 1.8 0 0 0 19.4 15Z" /></svg>
+          Más
+        </button>
+      </nav>
     </main>
 
     <script src="./app.js"></script>
