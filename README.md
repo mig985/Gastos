@@ -58,6 +58,16 @@ Al abrir la web de GitHub Pages, la app se conecta automaticamente al Apps Scrip
 
 Si cambias la implementacion de Apps Script y se genera una URL nueva, actualiza la constante `APP_CONFIG.apiUrl` en `app.js`. Para evitar eso, conviene editar la implementacion web existente en Apps Script en vez de crear una nueva.
 
+## Si el celular sigue mostrando una version vieja
+
+Despues de subir estos archivos a GitHub, abrí una vez esta direccion en el celular:
+
+```text
+https://mig985.github.io/Gastos/cache-reset.html
+```
+
+Esa pagina borra la cache anterior de la PWA y entra automaticamente a la app nueva.
+
 ## Instalar en el celular
 
 La web ya tiene manifest, service worker e icono de app.
