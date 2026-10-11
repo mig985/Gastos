@@ -54,14 +54,9 @@ Quien tiene acceso: Cualquier usuario con el enlace
 
 ## Primer uso
 
-Al abrir la web de GitHub Pages:
+Al abrir la web de GitHub Pages, la app se conecta automaticamente al Apps Script configurado en `app.js`. No hay que cargar URL ni clave en el celular.
 
-1. Tocar configuracion.
-2. Pegar la URL del Apps Script.
-3. Pegar la misma clave de `APP_SHARED_SECRET`.
-4. Guardar.
-
-La clave queda guardada solo en el navegador del celular con `localStorage`; no se sube a GitHub.
+Si cambias la implementacion de Apps Script y se genera una URL nueva, actualiza la constante `APP_CONFIG.apiUrl` en `app.js`. Para evitar eso, conviene editar la implementacion web existente en Apps Script en vez de crear una nueva.
 
 ## Instalar en el celular
 

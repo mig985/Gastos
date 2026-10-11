@@ -1,9 +1,9 @@
-const CACHE_NAME = 'gastos-app-v3';
+const CACHE_NAME = 'gastos-app-v6';
 const APP_ASSETS = [
   './',
   './index.html',
-  './styles.css',
-  './app.js',
+  './styles.css?v=6',
+  './app.js?v=6',
   './manifest.webmanifest',
   './icon.svg',
   './icon-192.png',
@@ -31,12 +31,19 @@ self.addEventListener('fetch', (event) => {
   }
 
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) {
-        return cached;
-      }
+    fetch(event.request)
+      .then((response) => {
+        const copy = response.clone();
+        const requestUrl = new URL(event.request.url);
 
-      return fetch(event.request).catch(() => caches.match('./index.html'));
+        if (requestUrl.origin === self.location.origin) {
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        }
+
+        return response;
+      })
+      .catch(() => {
+        return caches.match(event.request).then((cached) => cached || caches.match('./index.html'));
     })
   );
 });

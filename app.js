@@ -1,4 +1,10 @@
-const STORAGE_KEYS = {
+const APP_CONFIG = {
+  apiUrl:
+    'https://script.google.com/macros/s/AKfycby3RSKYE9VtHT72iW2rNGnAVujMTmOTKIR1vGgoAcCNcMjtBQDO17SuB7pYQAeiltfZaQ/exec',
+  secret: '2026',
+};
+
+const OLD_STORAGE_KEYS = {
   apiUrl: 'gastos.apiUrl',
   secret: 'gastos.secret',
 };
@@ -17,7 +23,6 @@ const state = {
 
 const els = {
   installButton: document.getElementById('installButton'),
-  settingsButton: document.getElementById('settingsButton'),
   prevMonth: document.getElementById('prevMonth'),
   nextMonth: document.getElementById('nextMonth'),
   monthSelect: document.getElementById('monthSelect'),
@@ -26,12 +31,8 @@ const els = {
     home: document.getElementById('homeView'),
     form: document.getElementById('formView'),
     alerts: document.getElementById('alertsView'),
-    settings: document.getElementById('settingsView'),
   },
   navButtons: [...document.querySelectorAll('.bottom-nav button')],
-  apiUrl: document.getElementById('apiUrl'),
-  secret: document.getElementById('secret'),
-  saveSettings: document.getElementById('saveSettings'),
   balanceMetric: document.getElementById('balanceMetric'),
   expensesMetric: document.getElementById('expensesMetric'),
   incomeMetric: document.getElementById('incomeMetric'),
@@ -53,31 +54,26 @@ const els = {
   saveEntryLabel: document.getElementById('saveEntryLabel'),
   refreshAlerts: document.getElementById('refreshAlerts'),
   alerts: document.getElementById('alerts'),
-  status: document.getElementById('status'),
   busyOverlay: document.getElementById('busyOverlay'),
   busyTitle: document.getElementById('busyTitle'),
   busyText: document.getElementById('busyText'),
 };
 
 function init() {
-  els.apiUrl.value = localStorage.getItem(STORAGE_KEYS.apiUrl) || '';
-  els.secret.value = localStorage.getItem(STORAGE_KEYS.secret) || '';
+  localStorage.removeItem(OLD_STORAGE_KEYS.apiUrl);
+  localStorage.removeItem(OLD_STORAGE_KEYS.secret);
   els.date.value = toInputDate(new Date());
 
   bindEvents();
   setMode('payment');
-  setView(getApiUrl() ? 'home' : 'settings');
+  setView('home');
   setupPwaInstall();
   registerServiceWorker();
-
-  if (getApiUrl()) {
-    loadEverything();
-  }
+  loadEverything();
 }
 
 function bindEvents() {
   els.installButton.addEventListener('click', installApp);
-  els.settingsButton.addEventListener('click', () => setView('settings'));
   els.prevMonth.addEventListener('click', () => {
     navigateMonth(-1);
   });
@@ -95,14 +91,6 @@ function bindEvents() {
 
   els.navButtons.forEach((button) => {
     button.addEventListener('click', () => setView(button.dataset.view));
-  });
-
-  els.saveSettings.addEventListener('click', () => {
-    localStorage.setItem(STORAGE_KEYS.apiUrl, els.apiUrl.value.trim());
-    localStorage.setItem(STORAGE_KEYS.secret, els.secret.value.trim());
-    setStatus('Configuracion guardada.', 'ok');
-    setView('home');
-    loadEverything();
   });
 
   els.modePayment.addEventListener('click', () => setMode('payment'));
@@ -148,8 +136,7 @@ async function installApp() {
     ? 'En iPhone: Compartir > Agregar a pantalla de inicio.'
     : 'En el navegador: menu > Instalar app o Agregar a pantalla principal.';
 
-  setStatus(message, 'warn');
-  setView('settings');
+  window.alert(message);
 }
 
 function registerServiceWorker() {
@@ -158,9 +145,12 @@ function registerServiceWorker() {
   }
 
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(() => {
-      setStatus('No se pudo activar el modo instalable.', 'warn');
-    });
+    navigator.serviceWorker
+      .register('./sw.js')
+      .then((registration) => registration.update())
+      .catch(() => {
+        setStatus('No se pudo activar el modo instalable.', 'warn');
+      });
   });
 }
 
@@ -183,7 +173,6 @@ function setView(view) {
     home: state.dashboard?.month || 'Gastos',
     form: state.mode === 'payment' ? 'Nuevo gasto' : 'Nuevo vencimiento',
     alerts: 'Alertas',
-    settings: 'Configuracion',
   };
 
   els.monthTitle.textContent = titles[view] || 'Gastos';
@@ -405,13 +394,13 @@ async function saveEntry() {
 
   if (!detail || !date) {
     setStatus('Falta cuenta o fecha.', 'error');
-    setView('settings');
+    setView('form');
     return;
   }
 
   if (state.mode === 'payment' && !amount) {
     setStatus('Falta monto.', 'error');
-    setView('settings');
+    setView('form');
     return;
   }
 
@@ -435,7 +424,7 @@ async function saveEntry() {
     setView('home');
   } catch (error) {
     setStatus(error.message, 'error');
-    setView('settings');
+    setView('form');
   } finally {
     setBusy(false);
   }
@@ -473,13 +462,17 @@ function apiCall(action, params = {}) {
   const apiUrl = getApiUrl();
 
   if (!apiUrl) {
-    return Promise.reject(new Error('Falta configurar la URL del Apps Script.'));
+    return Promise.reject(new Error('Falta definir la URL interna del Apps Script en app.js.'));
   }
 
   return new Promise((resolve, reject) => {
     const callbackName = `jsonp_${Date.now()}_${Math.random().toString(16).slice(2)}`;
     const url = new URL(apiUrl);
     const script = document.createElement('script');
+    const timeoutId = window.setTimeout(() => {
+      cleanup();
+      reject(new Error('Apps Script no respondio. Revisa que sea la URL /exec nueva y que el acceso sea Cualquiera.'));
+    }, 18000);
 
     window[callbackName] = (payload) => {
       cleanup();
@@ -501,15 +494,18 @@ function apiCall(action, params = {}) {
       url.searchParams.set('secret', secret);
     }
 
+    url.searchParams.set('_t', Date.now().toString());
     script.src = url.toString();
+    script.async = true;
     script.onerror = () => {
       cleanup();
-      reject(new Error('No se pudo conectar con Apps Script.'));
+      reject(new Error('No se pudo cargar Apps Script. Usa la URL de script.google.com que termina en /exec, sin /u/3 ni googleusercontent.'));
     };
 
     document.body.appendChild(script);
 
     function cleanup() {
+      window.clearTimeout(timeoutId);
       delete window[callbackName];
       script.remove();
     }
@@ -533,14 +529,18 @@ function shortLabel(detail) {
 }
 
 function getApiUrl() {
-  return els.apiUrl.value.trim();
+  return APP_CONFIG.apiUrl;
 }
 
 function getSecret() {
-  return els.secret.value.trim();
+  return APP_CONFIG.secret;
 }
 
 function setStatus(message, tone) {
+  if (!els.status) {
+    return;
+  }
+
   els.status.textContent = message;
   els.status.className = tone || '';
 }
