@@ -1,10 +1,10 @@
-const CACHE_NAME = 'gastos-app-v7';
+const CACHE_NAME = 'gastos-app-v8';
 const APP_ASSETS = [
-  './?v=7',
+  './?v=8',
   './index.html',
-  './styles.css?v=7',
-  './app.js?v=7',
-  './manifest.webmanifest?v=7',
+  './styles.css?v=8',
+  './app.js?v=8',
+  './manifest.webmanifest?v=8',
   './cache-reset.html',
   './icon.svg',
   './icon-192.png',
@@ -31,20 +31,26 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  const requestUrl = new URL(event.request.url);
+
+  if (requestUrl.origin !== self.location.origin) {
+    return;
+  }
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {
         const copy = response.clone();
-        const requestUrl = new URL(event.request.url);
-
-        if (requestUrl.origin === self.location.origin) {
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-        }
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
 
         return response;
       })
       .catch(() => {
-        return caches.match(event.request).then((cached) => cached || caches.match('./index.html'));
+        if (event.request.mode === 'navigate') {
+          return caches.match('./index.html');
+        }
+
+        return caches.match(event.request);
     })
   );
 });
