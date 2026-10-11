@@ -68,7 +68,7 @@ function init() {
   setMode('payment');
   setView('home');
   setupPwaInstall();
-  registerServiceWorker();
+  clearServiceWorkers();
   loadEverything();
 }
 
@@ -139,18 +139,16 @@ async function installApp() {
   window.alert(message);
 }
 
-function registerServiceWorker() {
+function clearServiceWorkers() {
   if (!('serviceWorker' in navigator)) {
     return;
   }
 
   window.addEventListener('load', () => {
     navigator.serviceWorker
-      .register('./sw.js')
-      .then((registration) => registration.update())
-      .catch(() => {
-        setStatus('No se pudo activar el modo instalable.', 'warn');
-      });
+      .getRegistrations()
+      .then((registrations) => Promise.all(registrations.map((registration) => registration.unregister())))
+      .catch(() => {});
   });
 }
 
