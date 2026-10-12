@@ -179,7 +179,7 @@ function isGoogleAppsScriptOrigin(origin) {
 function getBridgeUrl() {
   const url = new URL(getApiUrl());
 
-  url.searchParams.set('modo', 'bridge');
+  url.searchParams.set('mode', 'bridge');
   url.searchParams.set('_', Date.now().toString());
 
   return url.toString();
