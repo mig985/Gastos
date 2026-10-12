@@ -82,4 +82,4 @@ Compartir > Agregar a pantalla de inicio
 
 ## Nota importante
 
-Apps Script no funciona como una API CORS normal. Por eso esta web usa JSONP: es una tecnica vieja, pero muy practica para una app privada y estatica en GitHub Pages.
+Apps Script no funciona como una API CORS normal. Por eso esta web usa un iframe puente invisible, el mismo patron usado por la app Inventario: GitHub Pages habla con el puente por `postMessage` y el puente ejecuta Apps Script con `google.script.run`.
