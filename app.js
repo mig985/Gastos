@@ -1,7 +1,6 @@
 const APP_CONFIG = {
   apiUrl:
     'https://script.google.com/macros/s/AKfycbzrwRFyBK1LGnQvpWBLpJwAM1vnH4-OdKbAGEfBx8VJze04SU3VOvmwXwWuvIaqy6SH7Q/exec',
-  secret: '2026',
 };
 
 const CHANNEL_TO_BRIDGE = 'gastos-pwa';
@@ -9,7 +8,6 @@ const CHANNEL_FROM_BRIDGE = 'gastos-bridge';
 
 const OLD_STORAGE_KEYS = {
   apiUrl: 'gastos.apiUrl',
-  secret: 'gastos.secret',
 };
 
 const state = {
@@ -70,7 +68,6 @@ const els = {
 
 function init() {
   localStorage.removeItem(OLD_STORAGE_KEYS.apiUrl);
-  localStorage.removeItem(OLD_STORAGE_KEYS.secret);
   els.date.value = toInputDate(new Date());
 
   bindEvents();
@@ -606,14 +603,7 @@ async function apiCall(action, params = {}) {
     return Promise.reject(new Error('Falta definir la URL interna del Apps Script en app.js.'));
   }
 
-  const payload = { ...params };
-  const secret = getSecret();
-
-  if (secret) {
-    payload.secret = secret;
-  }
-
-  return bridgeCall(action, payload);
+  return bridgeCall(action, params);
 }
 
 function iconForDetail(detail) {
@@ -634,10 +624,6 @@ function shortLabel(detail) {
 
 function getApiUrl() {
   return APP_CONFIG.apiUrl;
-}
-
-function getSecret() {
-  return APP_CONFIG.secret;
 }
 
 function delay(ms) {
