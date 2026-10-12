@@ -494,6 +494,39 @@ async function loadDashboard(options = {}) {
   }
 }
 
+function addUnpaidAccounts(items) {
+  const visibleItems = [...items];
+  const seen = new Set(
+    visibleItems.map((item) =>
+      String(item.detail || '')
+        .trim()
+        .toLocaleLowerCase()
+        .replace(/\\s+/g, ' ')
+    )
+  );
+
+  state.accounts.forEach((account) => {
+    const detail = String(account.detail || '').trim();
+    const key = detail.toLocaleLowerCase().replace(/\\s+/g, ' ');
+
+    if (!detail || seen.has(key)) {
+      return;
+    }
+
+    seen.add(key);
+    visibleItems.push({
+      detail,
+      date: '',
+      amount: 0,
+      paid: false,
+      scheduled: false,
+      status: 'Pendiente',
+    });
+  });
+
+  return visibleItems;
+}
+
 function renderDashboard(data) {
   state.availableMonths = data.months || [];
   state.currentMonthKey = data.currentKey || monthKeyFromDate(state.currentDate);
@@ -509,7 +542,7 @@ function renderDashboard(data) {
   els.progressFill.style.width = `${progress}%`;
   els.progressText.textContent = `${formatMoney(data.expenses)} de ${formatMoney(data.income)}`;
 
-  const items = data.items || [];
+  const items = addUnpaidAccounts(data.items || []);
 
   if (!items.length) {
     els.expenseList.innerHTML = '<div class="empty-state">Sin movimientos cargados en este mes.</div>';
