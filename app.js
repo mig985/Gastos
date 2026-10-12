@@ -295,6 +295,11 @@ function bridgeCall(action, payload = {}, timeoutMs = 18000) {
   });
 }
 
+
+function apiCall(action, payload = {}, timeoutMs = 18000) {
+  return bridgeCall(action, payload, timeoutMs);
+}
+
 function isStandalone() {
   return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 }
@@ -406,6 +411,36 @@ async function loadAccounts() {
     setStatus(`${state.accounts.length} cuentas activas.`, 'ok');
   } catch (error) {
     setStatus(error.message, 'error');
+  }
+}
+
+async function refreshAlerts(options = {}) {
+  if (!options.silent) {
+    setBusy(true, 'Actualizando alertas', 'Leyendo datos del Google Sheet...');
+  }
+
+  try {
+    const response = await apiCall('alerts-preview');
+
+    if (!response.ok) {
+      throw new Error(response.error || 'No se pudieron cargar las alertas.');
+    }
+
+    state.alertsMessage = response.message || '';
+    els.alerts.textContent = state.alertsMessage || 'Sin novedades para alertar.';
+
+    if (!options.silent) {
+      setStatus('Alertas actualizadas.', 'ok');
+    }
+  } catch (error) {
+    els.alerts.textContent = error.message;
+    if (!options.silent) {
+      setStatus(error.message, 'error');
+    }
+  } finally {
+    if (!options.silent) {
+      setBusy(false);
+    }
   }
 }
 
