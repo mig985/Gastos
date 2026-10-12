@@ -31,26 +31,18 @@ Google Apps Script
 5. Elegir la rama `main` y carpeta `/root`.
 6. Pegar la URL publicada en el celular.
 
-## Backend
+## Backend sin PIN
 
-Antes, en Google Apps Script:
+En el proyecto de Google Apps Script conectado a tu Google Sheet:
 
-1. Pegar la version actualizada de `Code.gs`.
-2. Crear una Script Property:
+1. Reemplaza el contenido de `Code.gs` con el archivo `Code.gs` actualizado.
+2. Guarda el proyecto.
+3. Ve a `Implementar > Administrar implementaciones`, edita la implementación web con el lápiz y crea una versión nueva.
+4. Mantén `Ejecutar como: Yo` y `Quién tiene acceso: Cualquier usuario`.
+5. No hace falta crear la propiedad `APP_SHARED_SECRET`.
+6. Conserva la URL que termina en `/exec`; la app ya está configurada con esa URL.
 
-```text
-APP_SHARED_SECRET = una clave larga inventada por vos
-```
-
-3. Implementar como aplicacion web:
-
-```text
-Implementar > Nueva implementacion > Aplicacion web
-Ejecutar como: Yo
-Quien tiene acceso: Cualquier usuario con el enlace
-```
-
-4. Copiar la URL que termina en `/exec`.
+**Acceso público:** sin clave, cualquiera que obtenga la URL de la app o del puente puede leer y modificar la hoja de gastos. No uses esta versión si esos datos deben ser privados.
 
 ## Primer uso
 
