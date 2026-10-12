@@ -501,13 +501,13 @@ function addUnpaidAccounts(items) {
       String(item.detail || '')
         .trim()
         .toLocaleLowerCase()
-        .replace(/\\s+/g, ' ')
+        .replace(/\s+/g, ' ')
     )
   );
 
   state.accounts.forEach((account) => {
     const detail = String(account.detail || '').trim();
-    const key = detail.toLocaleLowerCase().replace(/\\s+/g, ' ');
+    const key = detail.toLocaleLowerCase().replace(/\s+/g, ' ');
 
     if (!detail || seen.has(key)) {
       return;
