@@ -338,7 +338,8 @@ function setMode(mode) {
 }
 
 async function loadEverything() {
-  await withBusy('Cargando app', 'Leyendo cuentas, meses y alertas...', async () => {
+  try {
+    await withBusy('Cargando app', 'Leyendo cuentas, meses y alertas...', async () => {
     const response = await apiCall('bootstrap', { date: toInputDate(state.currentDate) });
 
     if (!response.ok && /accion no soportada:\s*bootstrap/i.test(response.error || '')) {
@@ -354,6 +355,11 @@ async function loadEverything() {
 
     applyBootstrap(response);
   });
+  } catch (error) {
+    renderEmptyDashboard(error.message);
+    els.alerts.textContent = error.message;
+    setStatus(error.message, 'error');
+  }
 }
 
 function applyBootstrap(data) {
