@@ -50,6 +50,12 @@ Al abrir la web de GitHub Pages, la app se conecta automaticamente al Apps Scrip
 
 Si cambias la implementacion de Apps Script y se genera una URL nueva, actualiza la constante `APP_CONFIG.apiUrl` en `app.js`. Para evitar eso, conviene editar la implementacion web existente en Apps Script en vez de crear una nueva.
 
+## Carga de datos
+
+Al abrir Gastos, la app pide al puente un único resumen con cuentas, meses, movimientos y alertas. Cambiar de mes o de pestaña usa los datos guardados en memoria. Al guardar un pago o vencimiento, Apps Script guarda el dato y devuelve el resumen actualizado.
+
+Para activar este modo, también hay que reemplazar y volver a implementar el `Code.gs` nuevo. La app conserva un modo compatible hasta que el backend nuevo quede publicado.
+
 ## Si el celular sigue mostrando una version vieja
 
 Despues de subir estos archivos a GitHub, abrí una vez esta direccion en el celular:
