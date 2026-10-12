@@ -16,6 +16,9 @@ const state = {
   accounts: [],
   dashboard: null,
   availableMonths: [],
+  dashboards: {},
+  alertsMessage: '',
+  legacyBackend: false,
   currentMonthKey: '',
   installPrompt: null,
   currentDate: new Date(),
@@ -335,10 +338,47 @@ function setMode(mode) {
 }
 
 async function loadEverything() {
-  await withBusy('Cargando app', 'Leyendo cuentas, tablero y alertas...', async () => {
-    await loadAccounts();
-    await Promise.all([loadDashboard({ silent: true }), refreshAlerts({ silent: true })]);
+  await withBusy('Cargando app', 'Leyendo cuentas, meses y alertas...', async () => {
+    const response = await apiCall('bootstrap', { date: toInputDate(state.currentDate) });
+
+    if (!response.ok && /accion no soportada:\s*bootstrap/i.test(response.error || '')) {
+      state.legacyBackend = true;
+      await loadAccounts();
+      await Promise.all([loadDashboard({ silent: true }), refreshAlerts({ silent: true })]);
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(response.error || 'No se pudieron cargar los datos.');
+    }
+
+    applyBootstrap(response);
   });
+}
+
+function applyBootstrap(data) {
+  state.legacyBackend = false;
+  state.accounts = data.accounts || [];
+  state.availableMonths = data.months || [];
+  state.dashboards = data.dashboards || {};
+  state.alertsMessage = data.alertsMessage || '';
+  state.currentMonthKey = data.currentKey || monthKeyFromDate(state.currentDate);
+  state.currentDate = dateFromMonthKey(state.currentMonthKey);
+
+  els.detail.innerHTML = state.accounts
+    .map((account) => `<option value="${escapeHtml(account.detail)}">${escapeHtml(account.detail)}</option>`)
+    .join('');
+  renderSuggestions();
+
+  const dashboard = state.dashboards[state.currentMonthKey];
+  if (dashboard) {
+    state.dashboard = dashboard;
+    renderDashboard({ ...dashboard, months: state.availableMonths });
+  } else {
+    renderEmptyDashboard();
+  }
+
+  els.alerts.textContent = state.alertsMessage || 'Sin novedades para alertar.';
 }
 
 async function loadAccounts() {
@@ -364,6 +404,24 @@ async function loadAccounts() {
 }
 
 async function loadDashboard(options = {}) {
+  if (!state.legacyBackend) {
+    const key = monthKeyFromDate(state.currentDate);
+    const dashboard = state.dashboards[key];
+
+    if (!dashboard) {
+      renderEmptyDashboard();
+      return;
+    }
+
+    state.dashboard = dashboard;
+    renderDashboard({ ...dashboard, months: state.availableMonths });
+
+    if (state.view === 'home') {
+      setView('home');
+    }
+    return;
+  }
+
   if (!getApiUrl()) {
     renderEmptyDashboard();
     return;
@@ -557,8 +615,16 @@ async function saveEntry() {
 
     setStatus(state.mode === 'payment' ? 'Pago guardado.' : 'Vencimiento guardado.', 'ok');
     els.amount.value = '';
-    state.currentDate = new Date(`${date}T00:00:00`);
-    await Promise.all([loadDashboard({ silent: true }), refreshAlerts({ silent: true })]);
+    state.currentDate = new Date(date + 'T00:00:00');
+
+    if (state.legacyBackend) {
+      await Promise.all([loadDashboard({ silent: true }), refreshAlerts({ silent: true })]);
+    } else if (response.snapshot && response.snapshot.ok) {
+      applyBootstrap(response.snapshot);
+    } else {
+      throw new Error('Se guardó el dato, pero falta actualizar Code.gs con la versión nueva para refrescar la pantalla.');
+    }
+
     setView('home');
   } catch (error) {
     setStatus(error.message, 'error');
@@ -566,44 +632,6 @@ async function saveEntry() {
   } finally {
     setBusy(false);
   }
-}
-
-async function refreshAlerts(options = {}) {
-  if (!getApiUrl()) {
-    return;
-  }
-
-  els.alerts.textContent = 'Calculando...';
-
-  if (!options.silent) {
-    setBusy(true, 'Actualizando alertas', 'Calculando vencimientos y pendientes...');
-  }
-
-  try {
-    const response = await apiCall('alerts-preview');
-
-    if (!response.ok) {
-      throw new Error(response.error || 'No se pudo calcular alertas.');
-    }
-
-    els.alerts.textContent = response.message || 'Sin novedades para alertar.';
-  } catch (error) {
-    els.alerts.textContent = error.message;
-  } finally {
-    if (!options.silent) {
-      setBusy(false);
-    }
-  }
-}
-
-async function apiCall(action, params = {}) {
-  const apiUrl = getApiUrl();
-
-  if (!apiUrl) {
-    return Promise.reject(new Error('Falta definir la URL interna del Apps Script en app.js.'));
-  }
-
-  return bridgeCall(action, params);
 }
 
 function iconForDetail(detail) {
