@@ -1,6 +1,6 @@
 const APP_CONFIG = {
   apiUrl:
-    'https://script.google.com/macros/s/AKfycby3RSKYE9VtHT72iW2rNGnAVujMTmOTKIR1vGgoAcCNcMjtBQDO17SuB7pYQAeiltfZaQ/exec',
+    'https://script.google.com/macros/s/AKfycbzrwRFyBK1LGnQvpWBLpJwAM1vnH4-OdKbAGEfBx8VJze04SU3VOvmwXwWuvIaqy6SH7Q/exec',
   secret: '2026',
 };
 
